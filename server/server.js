@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 //
-// call-bases runtime server.
+// dna runtime server.
 //
 // A stateless, dependency-free (Node built-ins only) "reveal bytes up to f(now)"
 // service. The global cursor is a pure function of wall-clock time:
@@ -43,31 +43,31 @@ function loadConfig() {
     attractionHistorySize: 8,
     attractionFetchTimeoutMs: 12000,
   };
-  const cfgPath = process.env.CALLBASES_CONFIG || path.join(__dirname, "config.json");
+  const cfgPath = process.env.DNA_CONFIG || path.join(__dirname, "config.json");
   if (fs.existsSync(cfgPath)) {
     Object.assign(cfg, JSON.parse(fs.readFileSync(cfgPath, "utf8")));
   }
   const env = process.env;
   const ENV_MAP = [
-    ["CALLBASES_ARTIFACTS_DIR", "artifactsDir"],
-    ["CALLBASES_WEB_DIR", "webDir"],
-    ["CALLBASES_LISTEN", "listen"],
-    ["CALLBASES_START_EPOCH", "startEpoch"],
-    ["CALLBASES_RATE", "rate", Number],
-    ["CALLBASES_RUNTIME_SECONDS", "runtimeSeconds", Number],
-    ["CALLBASES_TAIL", "tail", Number],
-    ["CALLBASES_TICK_MS", "tickMs", Number],
-    ["CALLBASES_PILEUP", "pileup", (v) => v === "true"],
-    ["CALLBASES_ATTRACTIONS", "attractions", (v) => v === "true"],
-    ["CALLBASES_ATTRACTION_SPECIES", "attractionSpecies"],
-    ["CALLBASES_ATTRACTION_ASSEMBLY", "attractionAssembly"],
-    ["CALLBASES_ATTRACTION_WINDOW_BASES", "attractionWindowBases", Number],
-    ["CALLBASES_ATTRACTION_DEAD_AIR_MS", "attractionDeadAirMs", Number],
-    ["CALLBASES_ATTRACTION_MIN_INTERVAL_MS", "attractionMinIntervalMs", Number],
-    ["CALLBASES_ATTRACTION_MAX_INTERVAL_MS", "attractionMaxIntervalMs", Number],
-    ["CALLBASES_ATTRACTION_CACHE_SIZE", "attractionCacheSize", Number],
-    ["CALLBASES_ATTRACTION_HISTORY_SIZE", "attractionHistorySize", Number],
-    ["CALLBASES_ATTRACTION_FETCH_TIMEOUT_MS", "attractionFetchTimeoutMs", Number],
+    ["DNA_ARTIFACTS_DIR", "artifactsDir"],
+    ["DNA_WEB_DIR", "webDir"],
+    ["DNA_LISTEN", "listen"],
+    ["DNA_START_EPOCH", "startEpoch"],
+    ["DNA_RATE", "rate", Number],
+    ["DNA_RUNTIME_SECONDS", "runtimeSeconds", Number],
+    ["DNA_TAIL", "tail", Number],
+    ["DNA_TICK_MS", "tickMs", Number],
+    ["DNA_PILEUP", "pileup", (v) => v === "true"],
+    ["DNA_ATTRACTIONS", "attractions", (v) => v === "true"],
+    ["DNA_ATTRACTION_SPECIES", "attractionSpecies"],
+    ["DNA_ATTRACTION_ASSEMBLY", "attractionAssembly"],
+    ["DNA_ATTRACTION_WINDOW_BASES", "attractionWindowBases", Number],
+    ["DNA_ATTRACTION_DEAD_AIR_MS", "attractionDeadAirMs", Number],
+    ["DNA_ATTRACTION_MIN_INTERVAL_MS", "attractionMinIntervalMs", Number],
+    ["DNA_ATTRACTION_MAX_INTERVAL_MS", "attractionMaxIntervalMs", Number],
+    ["DNA_ATTRACTION_CACHE_SIZE", "attractionCacheSize", Number],
+    ["DNA_ATTRACTION_HISTORY_SIZE", "attractionHistorySize", Number],
+    ["DNA_ATTRACTION_FETCH_TIMEOUT_MS", "attractionFetchTimeoutMs", Number],
   ];
   for (const [envKey, cfgKey, parse] of ENV_MAP) {
     if (env[envKey] != null) cfg[cfgKey] = parse ? parse(env[envKey]) : env[envKey];
@@ -976,7 +976,7 @@ function main() {
   const cfg = loadConfig();
   const st = openState(cfg);
   console.log(
-    `call-bases: N=${st.N} rate=${st.rate.toFixed(3)} b/s start=${new Date(
+    `dna: N=${st.N} rate=${st.rate.toFixed(3)} b/s start=${new Date(
       st.startEpoch * 1000
     ).toISOString()} pileup=${st.pileupEnabled} attractions=${st.attractions.enabled ? "on" : "off"}`
   );

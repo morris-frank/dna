@@ -16,4 +16,4 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          script: /opt/call-bases/infra/deploy.sh
+          script: /opt/dna/infra/deploy.sh

@@ -1,6 +1,8 @@
-# call-bases
+# dna
 
 a genome, unfurling itself exactly once. base by base.
+
+live at <https://dna.maurice-frank.com>.
 
 at human scale:
 
@@ -35,8 +37,8 @@ node only, zero dependencies.
 cp server/config.example.json server/config.json   # edit pacing
 node server/server.js
 # or via env:
-CALLBASES_ARTIFACTS_DIR=./artifacts CALLBASES_START_EPOCH=2026-07-01T00:00:00Z \
-CALLBASES_RUNTIME_SECONDS=31536000 node server/server.js
+DNA_ARTIFACTS_DIR=./artifacts DNA_START_EPOCH=2026-07-01T00:00:00Z \
+DNA_RUNTIME_SECONDS=31536000 node server/server.js
 ```
 
 Open <http://localhost:8080>.
@@ -50,9 +52,9 @@ If your reference assembly is not GRCh38, set it explicitly in `config.json`
 or via env:
 
 ```bash
-CALLBASES_ATTRACTION_ASSEMBLY=GRCh37
-CALLBASES_ATTRACTION_DEAD_AIR_MS=30000
-CALLBASES_ATTRACTION_WINDOW_BASES=200000
+DNA_ATTRACTION_ASSEMBLY=GRCh37
+DNA_ATTRACTION_DEAD_AIR_MS=30000
+DNA_ATTRACTION_WINDOW_BASES=200000
 node server/server.js
 ```
 
@@ -64,10 +66,10 @@ for automatic https and sse-friendly proxying.
 
 ```bash
 # on the VPS, once:
-sudo mkdir -p /opt/call-bases
-sudo cp infra/call-bases.service /etc/systemd/system/
-sudo cp infra/call-bases.env.example /opt/call-bases/call-bases.env   # edit pacing
-CALLBASES_DOMAIN=stream.example.org caddy run --config infra/Caddyfile  # or as a service
+sudo mkdir -p /opt/dna
+sudo cp infra/dna.service /etc/systemd/system/
+sudo cp infra/dna.env.example /opt/dna/dna.env   # edit pacing
+caddy run --config infra/Caddyfile   # serves dna.maurice-frank.com; or run as a service
 
 # from your machine:
 infra/deploy.sh user@vps-host artifacts
