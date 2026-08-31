@@ -149,7 +149,7 @@ async function handleHead(env, cfg, acfg, url, ctx) {
   let attraction = null;
   if (acfg.enabled && index > 0) {
     try {
-      const list = await attractionsFor(env, cfg, acfg, index, ctx);
+      const list = await attractionsFor(env, cfg, acfg, index, url, ctx);
       attraction = currentAttraction(acfg, list, now);
     } catch (_) {
       // attractions are decoration; never fail the stream over them
@@ -162,23 +162,34 @@ async function handleHead(env, cfg, acfg, url, ctx) {
 // One window's attraction list, memoised in the edge cache. With no viewers
 // there are no requests, so there are no upstream fetches either - the same
 // quiet-when-nobody-is-listening behaviour the old dead-air timer gave us.
-async function attractionsFor(env, cfg, acfg, index, ctx) {
+async function attractionsFor(env, cfg, acfg, index, url, ctx) {
   const region = attractionWindowFor(cfg.contigs, acfg, Math.max(0, index - 1));
   if (!region) return [];
 
+  // The key has to sit on this zone - the Cache API refuses hostnames the
+  // Worker does not control, and a refused key means we would re-fetch Ensembl
+  // on every single request.
   const cache = caches.default;
-  const cacheKey = new Request(`https://dna.internal/attractions/${encodeURIComponent(region.key)}`);
-  const hit = await cache.match(cacheKey);
-  if (hit) return hit.json();
+  const cacheKey = new Request(`${url.origin}/__attractions/${encodeURIComponent(region.key)}`);
+  try {
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit.json();
+  } catch (_) {
+    // a cache miss must never cost us the attraction
+  }
 
   const list = await fetchAttractionsForWindow(acfg, region);
+  // An empty list means every upstream was down. Hold it briefly so a degraded
+  // Ensembl does not make each request pay the full fetch timeout, but retry
+  // long before the hour a good result gets.
+  const ttl = list.length ? acfg.cacheTtlSeconds : 120;
   const stash = new Response(JSON.stringify(list), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": `public, max-age=${acfg.cacheTtlSeconds}`,
+      "Cache-Control": `public, max-age=${ttl}`,
     },
   });
-  ctx.waitUntil(cache.put(cacheKey, stash.clone()));
+  ctx.waitUntil(cache.put(cacheKey, stash).catch(() => {}));
   return list;
 }
 

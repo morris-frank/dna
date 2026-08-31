@@ -30,3 +30,7 @@ venv/
 
 # secrets
 .env
+
+# wrangler local state
+.wrangler/
+node_modules/

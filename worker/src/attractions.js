@@ -529,10 +529,13 @@ export async function fetchAttractionsForWindow(acfg, region) {
     const queryRegion = `${region.seqRegion}:${region.start}-${region.end}`;
     const conservationPromise = fetchConservationForWindow(acfg, region, ac.signal).catch(() => null);
     const ccrePromise = fetchCcreForWindow(acfg, region, ac.signal).catch(() => []);
+    // Every source is optional. Ensembl's phenotype endpoints in particular go
+    // slow or 500 for minutes at a time, and losing them should cost us the
+    // phenotype attractions for this window - not the genes and cCREs too.
     const [overlap, genePhenotypes, variantPhenotypes, conservation, ccreItems] = await Promise.all([
-      fetchJson(acfg, `/overlap/region/${overlapSpecies}/${queryRegion}`, [["feature", "gene"], ["feature", "regulatory"]], ac.signal),
-      fetchJson(acfg, `/phenotype/region/${acfg.species}/${queryRegion}`, [["feature_type", "Gene"]], ac.signal),
-      fetchJson(acfg, `/phenotype/region/${acfg.species}/${queryRegion}`, [["feature_type", "Variation"]], ac.signal),
+      fetchJson(acfg, `/overlap/region/${overlapSpecies}/${queryRegion}`, [["feature", "gene"], ["feature", "regulatory"]], ac.signal).catch(() => []),
+      fetchJson(acfg, `/phenotype/region/${acfg.species}/${queryRegion}`, [["feature_type", "Gene"]], ac.signal).catch(() => []),
+      fetchJson(acfg, `/phenotype/region/${acfg.species}/${queryRegion}`, [["feature_type", "Variation"]], ac.signal).catch(() => []),
       conservationPromise,
       ccrePromise,
     ]);
