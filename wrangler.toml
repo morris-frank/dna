@@ -14,6 +14,7 @@ binding = "ASSETS"
 [[r2_buckets]]
 binding = "GENOME"
 bucket_name = "dna-artifacts"
+jurisdiction = "eu"
 
 [observability]
 enabled = true

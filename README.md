@@ -82,9 +82,19 @@ the artifacts are uploaded once, by hand — wrangler caps a single object at
 315 mb, so the 3.1 gb consensus needs a multipart client against the s3 endpoint:
 
 ```bash
-wrangler r2 bucket create dna-artifacts
-rclone copy artifacts/consensus.bin r2:dna-artifacts/   # or aws s3 cp
-wrangler r2 object put dna-artifacts/meta.json --file artifacts/meta.json
+wrangler r2 bucket create dna-artifacts -J eu
+rclone copy artifacts/ r2:dna-artifacts/ --include consensus.bin --include meta.json \
+  --s3-chunk-size 100M --s3-upload-concurrency 4
 ```
+
+the bucket is eu-jurisdiction, so the s3 endpoint is
+`https://<account>.eu.r2.cloudflarestorage.com` — the `.eu.` matters, a
+default-jurisdiction bucket is simply not visible there and vice versa. rclone
+also wants `region = auto`. the worker reaches the bucket through its binding
+rather than the endpoint, but `jurisdiction = "eu"` still has to be on the
+`[[r2_buckets]]` block or the binding resolves to the wrong namespace.
+
+a token scoped to one bucket cannot `ListBuckets`, so `rclone lsd r2:` returning
+403 is expected — list inside the bucket instead.
 
 the bucket must stay private. do not enable the `r2.dev` public url.
