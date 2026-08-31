@@ -6,6 +6,7 @@ live at <https://dna.maurice-frank.com>.
 
 at human scale:
 
+* 30 b/s → ~3.3 years  (what it is actually running at, from 2026-06-09)
 * ~101 b/s → ~1 year
 * ~1235 b/s → ~30 days
 
@@ -31,49 +32,59 @@ without it.
 
 ## run
 
-node only, zero dependencies.
+the runtime is a cloudflare worker over an r2 bucket. no server, no state.
 
 ```bash
-cp server/config.example.json server/config.json   # edit pacing
-node server/server.js
-# or via env:
-DNA_ARTIFACTS_DIR=./artifacts DNA_START_EPOCH=2026-07-01T00:00:00Z \
-DNA_RUNTIME_SECONDS=31536000 node server/server.js
+npx wrangler dev --remote      # runs against the real bucket
+npx wrangler deploy
+node worker/gate.test.mjs      # asserts nothing past f(now) is reachable
 ```
 
-Open <http://localhost:8080>.
+the page talks to three endpoints:
 
-`touristic attractions` are enabled by default and are fetched only on the
-backend from Ensembl region endpoints, then broadcast as summary messages over
-the existing SSE stream. They are window-cached server-side and the attraction
-worker quiets down after `attractionDeadAirMs` of having no connected listeners.
+| endpoint | what it gives |
+| --- | --- |
+| `/meta` | `n`, `rate`, `startEpoch`, contigs. cacheable, no sequence in it |
+| `/head?from=` | the slice revealed since `from`, ending exactly at `f(now)` |
+| `/pileup?pos=` | one pile-up column, refused if `pos` is past `f(now)` |
 
-If your reference assembly is not GRCh38, set it explicitly in `config.json`
-or via env:
+everything else is served straight from `web/` as a static asset.
 
-```bash
-DNA_ATTRACTION_ASSEMBLY=GRCh37
-DNA_ATTRACTION_DEAD_AIR_MS=30000
-DNA_ATTRACTION_WINDOW_BASES=200000
-node server/server.js
-```
+`touristic attractions` are fetched on the worker from ensembl and ucsc, keyed
+to the 200 kb window around the playhead and memoised in the edge cache, so a
+window costs one round of upstream calls per hour no matter how many people are
+watching. with nobody watching there are no requests and so no fetches at all.
+which attraction is showing is derived from the clock rather than pushed, so
+every viewer sees the same one at the same moment without the worker holding
+any state.
+
+pacing lives in `wrangler.toml` (`START_EPOCH`, `RATE`). changing either moves
+the playhead, so treat them as fixed once the piece is running.
+
+## the gate
+
+the genome is revealed exactly once, in step with wall-clock time, and nothing
+ahead of the playhead is retrievable — that is the whole point of the piece and
+it is enforced in one place.
+
+the r2 bucket is **private**: no public access, no `r2.dev` domain. the only
+path from those objects to a response body is `readBases()` in
+`worker/src/index.js`, and every caller clamps its end to `currentIndex()`
+first. an endpoint that reads the consensus goes through that function or it
+does not read the consensus. `worker/gate.test.mjs` pins the behaviour.
 
 ## deploy
 
-one small vps, sized for the artifact disk (~5 gb consensus-only, ~60-80 gb with
-pile-up), running the server under `systemd` for the whole project, behind caddy
-for automatic https and sse-friendly proxying.
+pushes to `main` deploy via `.github/workflows/deploy.yml`, which needs
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in repo secrets.
+
+the artifacts are uploaded once, by hand — wrangler caps a single object at
+315 mb, so the 3.1 gb consensus needs a multipart client against the s3 endpoint:
 
 ```bash
-# on the VPS, once:
-sudo mkdir -p /opt/dna
-sudo cp infra/dna.service /etc/systemd/system/
-sudo cp infra/dna.env.example /opt/dna/dna.env   # edit pacing
-caddy run --config infra/Caddyfile   # serves dna.maurice-frank.com; or run as a service
-
-# from your machine:
-infra/deploy.sh user@vps-host artifacts
+wrangler r2 bucket create dna-artifacts
+rclone copy artifacts/consensus.bin r2:dna-artifacts/   # or aws s3 cp
+wrangler r2 object put dna-artifacts/meta.json --file artifacts/meta.json
 ```
 
-the server is stateless: a restart (or reboot) resumes at the correct `f(now)`
-index automatically.
+the bucket must stay private. do not enable the `r2.dev` public url.

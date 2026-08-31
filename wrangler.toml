@@ -1,0 +1,42 @@
+name = "dna"
+main = "worker/src/index.js"
+compatibility_date = "2026-08-01"
+
+# The page, fonts and everything else static. Assets are matched before the
+# Worker runs; only /meta, /head and /pileup reach the fetch handler.
+[assets]
+directory = "./web"
+binding = "ASSETS"
+
+# Private bucket. No public access, no r2.dev domain - the Worker's readBases()
+# is the only path from these objects to a response body, and that is what
+# enforces "nothing beyond f(now) is readable".
+[[r2_buckets]]
+binding = "GENOME"
+bucket_name = "dna-artifacts"
+
+[observability]
+enabled = true
+
+[vars]
+# Pacing carried over verbatim from the droplet: 3,105,715,063 bases at 30 b/s
+# from 2026-06-09 is a ~3.28 year run. Changing either value moves the playhead.
+START_EPOCH = "2026-06-09T00:00:00Z"
+RATE = "30"
+
+TAIL = "4096"          # bases handed to a fresh client for visual continuity
+HEAD_MAX_SPAN = "65536" # cap on one /head response; beyond this the client resets
+
+PILEUP = "false"
+
+ATTRACTIONS = "true"
+ATTRACTION_SPECIES = "homo_sapiens"
+ATTRACTION_ASSEMBLY = "GRCh38"
+ATTRACTION_WINDOW_BASES = "200000"
+ATTRACTION_SLOT_MS = "25000"
+ATTRACTION_FETCH_TIMEOUT_MS = "12000"
+ATTRACTION_CACHE_TTL_SECONDS = "3600"
+
+[[routes]]
+pattern = "dna.maurice-frank.com"
+custom_domain = true

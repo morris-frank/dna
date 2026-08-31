@@ -913,70 +913,85 @@
         }
       }
 
-      // --- SSE ---------------------------------------------------------------
-      let es = null;
-      let reconnectTimer = null;
+      // --- transport ---------------------------------------------------------
+      // The cursor is f(now), so there is nothing for the server to push: we ask
+      // /head for the slice revealed since we last checked. The display paces
+      // itself out of the buffer (advanceDisplay), so a multi-second poll just
+      // means we run about one interval behind the true playhead rather than
+      // stuttering. Nothing ahead of f(now) is ever sent, so there is nothing
+      // ahead of it to hold.
+      const POLL_MS = 5000;
+      let pollTimer = null;
+      let metaLoaded = false;
+      let inFlight = false;
+      let shownAttractionId = null;
+
+      async function loadMeta() {
+        const res = await fetch("/meta");
+        if (!res.ok) throw new Error("meta " + res.status);
+        const m = await res.json();
+        M.n = m.n; M.rate = m.rate; M.startEpoch = m.startEpoch;
+        M.pileup = m.pileup; M.contigs = m.contigs || [];
+        M.attractionsEnabled = !!m.attractionsEnabled;
+        M.attractions = [];
+        M.complete = false;
+        el.hoverHint.textContent = M.pileup ? "hover the now-line for the pile-up" : "";
+        updateRateLabel();
+        updatePctSchedule();
+        if (!M.attractionsEnabled) setAttraction(null);
+        metaLoaded = true;
+      }
+
+      function applyHead(h) {
+        M.streamLive = true;
+        const contiguous = M.bases.length > 0 && h.from <= M.maxRevealed && h.index >= M.maxRevealed;
+        if (contiguous) {
+          appendBases(M.maxRevealed, h.bases.slice(M.maxRevealed - h.from));
+          M.maxRevealed = Math.max(M.maxRevealed, h.index);
+        } else {
+          resetBuffer(h.from, h.bases, h.index);
+          // Start the playhead one interval back so it always has buffer to eat.
+          const cushion = Math.ceil(M.rate * (POLL_MS / 1000));
+          resetPace(Math.max(h.from, h.index - cushion), M.rate);
+          syncDropSoundIndex();
+        }
+        noteTick(h.index);
+
+        if (M.attractionsEnabled && h.attraction && h.attraction.id !== shownAttractionId) {
+          shownAttractionId = h.attraction.id;
+          M.attractions.push(h.attraction);
+          if (M.attractions.length > 12) M.attractions.splice(0, M.attractions.length - 12);
+          setAttraction(h.attraction);
+        }
+
+        if (h.complete) {
+          M.complete = true;
+          M.streamLive = false;
+          M.maxRevealed = M.n;
+          noteTick(M.n);
+        }
+      }
+
+      async function poll() {
+        if (inFlight) return;
+        inFlight = true;
+        try {
+          if (!metaLoaded) await loadMeta();
+          const q = M.bases.length ? "?from=" + M.maxRevealed : "";
+          const res = await fetch("/head" + q);
+          if (!res.ok) throw new Error("head " + res.status);
+          applyHead(await res.json());
+        } catch (_) {
+          M.streamLive = false;
+        } finally {
+          inFlight = false;
+        }
+      }
 
       function connect() {
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        if (es) {
-          es.close();
-          es = null;
-        }
-        es = new EventSource("/stream");
-        es.onopen = () => { M.streamLive = true; };
-        es.onmessage = (ev) => {
-          M.streamLive = true;
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "hello") {
-            M.n = msg.n; M.rate = msg.rate; M.startEpoch = msg.startEpoch;
-            M.pileup = msg.pileup; M.contigs = msg.contigs || [];
-            M.attractionsEnabled = !!msg.attractionsEnabled;
-            M.attractions = msg.attractions || [];
-            M.complete = false;
-            resetBuffer(msg.tailStart, msg.tail, msg.index);
-            resetPace(msg.index, msg.rate);
-            syncDropSoundIndex();
-            updateRateLabel();
-            updatePctSchedule();
-            el.hoverHint.textContent = M.pileup ? "hover the now-line for the pile-up" : "";
-            if (M.attractionsEnabled) {
-              setAttraction(M.attractions.length ? M.attractions[M.attractions.length - 1] : null);
-            } else {
-              setAttraction(null);
-            }
-          } else if (msg.type === "tick") {
-            appendBases(M.maxRevealed, msg.bases);
-            M.maxRevealed = Math.max(M.maxRevealed, msg.index);
-            noteTick(msg.index);
-          } else if (msg.type === "attraction") {
-            if (!M.attractionsEnabled) return;
-            M.attractions.push(msg.attraction);
-            if (M.attractions.length > 12) M.attractions.splice(0, M.attractions.length - 12);
-            setAttraction(msg.attraction);
-          } else if (msg.type === "complete") {
-            M.complete = true;
-            M.streamLive = false;
-            M.maxRevealed = M.n;
-            noteTick(M.n);
-          }
-        };
-        es.onerror = () => {
-          M.streamLive = false;
-          if (es) {
-            es.close();
-            es = null;
-          }
-          if (!reconnectTimer) {
-            reconnectTimer = setTimeout(() => {
-              reconnectTimer = null;
-              connect();
-            }, 800);
-          }
-        };
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(poll, POLL_MS);
+        void poll();
       }
 
       document.addEventListener("visibilitychange", () => {
