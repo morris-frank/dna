@@ -1,14 +1,34 @@
-# dna
+<p align="center">
+  <a href="https://dna.maurice-frank.com">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20watch%20it%20unfurl-8EDE3D?style=for-the-badge&amp;labelColor=16211B" alt="watch it unfurl">
+  </a>
+</p>
 
-a genome, unfurling itself exactly once. base by base.
+<img src="brand/icon/icon-dna-on-obsidian-1024.png" align="left" width="128" hspace="16" alt="dna icon">
 
-live at <https://dna.maurice-frank.com>.
+<h3>dna</h3>
 
-at human scale:
+<p>
+  <sub>ONE GENOME, REVEALED ONCE</sub>
+  <br>
+  <strong>a genome, unfurling itself exactly once. base by base.</strong>
+  <br>
+  <br>
+  <img src="https://img.shields.io/badge/rate-30%20b%2Fs-8EDE3D?style=flat-square&amp;labelColor=16211B" alt="30 bases per second">
+  <img src="https://img.shields.io/badge/runtime-~3.3%20years-8EDE3D?style=flat-square&amp;labelColor=16211B" alt="about 3.3 years">
+  <img src="https://img.shields.io/badge/edge-cloudflare%20worker%20%2B%20r2-1AB172?style=flat-square&amp;labelColor=16211B" alt="cloudflare worker and r2">
+  <a href="#the-gate"><img src="https://img.shields.io/badge/bucket-private-EE7931?style=flat-square&amp;labelColor=16211B" alt="private bucket"></a>
+</p>
 
-* 30 b/s → ~3.3 years  (what it is actually running at, from 2026-06-09)
-* ~101 b/s → ~1 year
-* ~1235 b/s → ~30 days
+<br clear="left">
+
+live at <https://dna.maurice-frank.com>, running since 2026-06-09. at human scale:
+
+| rate | whole genome in |
+| --- | --- |
+| **30 b/s** (live) | ~3.3 years |
+| ~101 b/s | ~1 year |
+| ~1235 b/s | ~30 days |
 
 ## build
 
