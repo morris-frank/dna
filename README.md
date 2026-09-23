@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<img src="brand/icon/icon-dna-on-obsidian-1024.png" align="left" width="128" hspace="16" alt="dna icon">
+<img src="brand/icon/icon-dna-on-obsidian-v2-1024.png" align="left" width="128" hspace="16" alt="dna icon">
 
 <h3>dna</h3>
 
